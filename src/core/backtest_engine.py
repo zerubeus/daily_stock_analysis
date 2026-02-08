@@ -80,8 +80,13 @@ class BacktestEngine:
         "wait",
     )
 
-    _NEGATION_EN = ("not ", "don't ", "do not ", "no ", "never ", "avoid ")
-    _NEGATION_ZH = ("不要", "不", "别", "勿", "没有")
+    # Negation prefixes (trailing spaces stripped for suffix-matching against prefix text).
+    # English patterns include trailing space in their canonical form; rstrip is
+    # applied during matching so "do not" matches prefix "do not " or "do not".
+    _NEGATION_PATTERNS = (
+        "not", "don't", "do not", "no", "never", "avoid",  # English
+        "不要", "不", "别", "勿", "没有",  # Chinese
+    )
 
     @classmethod
     def infer_direction_expected(cls, operation_advice: Optional[str]) -> str:
@@ -99,17 +104,15 @@ class BacktestEngine:
 
     @classmethod
     def infer_position_recommendation(cls, operation_advice: Optional[str]) -> str:
-        """Infer recommended position: long/cash (long-only system)."""
+        """Infer recommended position: long/cash (long-only system).
+
+        Priority: bearish/wait -> cash, bullish/hold -> long, unrecognized -> cash.
+        """
         text = cls._normalize_text(operation_advice)
-        if cls._matches_intent(text, cls._BEARISH_KEYWORDS):
+        if cls._matches_intent(text, cls._BEARISH_KEYWORDS) or cls._matches_intent(text, cls._WAIT_KEYWORDS):
             return "cash"
-        if cls._matches_intent(text, cls._WAIT_KEYWORDS):
-            return "cash"
-        if cls._matches_intent(text, cls._BULLISH_KEYWORDS):
+        if cls._matches_intent(text, cls._BULLISH_KEYWORDS) or cls._matches_intent(text, cls._HOLD_KEYWORDS):
             return "long"
-        if cls._matches_intent(text, cls._HOLD_KEYWORDS):
-            return "long"
-        # Unrecognized text: conservative default to cash
         return "cash"
 
     @classmethod
@@ -351,36 +354,30 @@ class BacktestEngine:
 
     @classmethod
     def _matches_intent(cls, text: str, keywords: Sequence[str]) -> bool:
-        """Check if text expresses the intent of any keyword, accounting for negation."""
+        """Check if text expresses the intent of any keyword, accounting for negation.
+
+        Tier 1: exact match (covers clean labels like "买入", "hold").
+        Tier 2: substring match with negation guard.
+        Keywords are assumed to be lowercase (matching _normalize_text output).
+        """
         if not text:
             return False
-        # Tier 1: exact match (covers clean labels like "买入", "hold")
         for kw in keywords:
-            if text == kw.lower():
+            if text == kw:
                 return True
-        # Tier 2: substring match with negation guard
         for kw in keywords:
-            kw_lower = kw.lower()
-            idx = text.find(kw_lower)
+            idx = text.find(kw)
             if idx == -1:
                 continue
-            prefix = text[:idx]
-            if cls._is_negated(prefix):
-                continue
-            return True
+            if not cls._is_negated(text[:idx]):
+                return True
         return False
 
     @classmethod
     def _is_negated(cls, prefix: str) -> bool:
         """Check if the prefix text ends with a negation pattern."""
         stripped = prefix.rstrip()
-        for neg in cls._NEGATION_EN:
-            if stripped.endswith(neg.rstrip()):
-                return True
-        for neg in cls._NEGATION_ZH:
-            if stripped.endswith(neg):
-                return True
-        return False
+        return any(stripped.endswith(neg) for neg in cls._NEGATION_PATTERNS)
 
     @classmethod
     def _classify_outcome(

@@ -10,7 +10,7 @@
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional, List, Dict, Any
 
 import pandas as pd
