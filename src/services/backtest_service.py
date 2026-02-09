@@ -219,8 +219,6 @@ class BacktestService:
 
     def get_summary(self, *, scope: str, code: Optional[str], eval_window_days: Optional[int] = None) -> Optional[Dict[str, Any]]:
         config = get_config()
-        if eval_window_days is None:
-            eval_window_days = int(getattr(config, "backtest_eval_window_days", 10))
         engine_version = str(getattr(config, "backtest_engine_version", "v1"))
         lookup_code = OVERALL_SENTINEL_CODE if scope == "overall" else code
         summary = self.repo.get_summary(

@@ -174,20 +174,22 @@ class BacktestRepository:
         *,
         scope: str,
         code: Optional[str],
-        eval_window_days: int,
+        eval_window_days: Optional[int] = None,
         engine_version: str,
     ) -> Optional[BacktestSummary]:
         with self.db.get_session() as session:
+            conditions = [
+                BacktestSummary.scope == scope,
+                BacktestSummary.code == code,
+                BacktestSummary.engine_version == engine_version,
+            ]
+            if eval_window_days is not None:
+                conditions.append(BacktestSummary.eval_window_days == eval_window_days)
+
             row = session.execute(
                 select(BacktestSummary)
-                .where(
-                    and_(
-                        BacktestSummary.scope == scope,
-                        BacktestSummary.code == code,
-                        BacktestSummary.eval_window_days == eval_window_days,
-                        BacktestSummary.engine_version == engine_version,
-                    )
-                )
+                .where(and_(*conditions))
+                .order_by(desc(BacktestSummary.computed_at))
                 .limit(1)
             ).scalar_one_or_none()
             return row

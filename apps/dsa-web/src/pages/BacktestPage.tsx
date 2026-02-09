@@ -162,7 +162,7 @@ const BacktestPage: React.FC = () => {
     }
   }, []);
 
-  // Initial load
+  // Initial load — no window filter so it picks up the latest summary
   useEffect(() => {
     fetchResults(1);
     fetchPerformance();
