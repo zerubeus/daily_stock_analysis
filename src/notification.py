@@ -504,20 +504,20 @@ class NotificationService:
                     "",
                 ])
             
-            # 风险提示
+            # Risk warning
             if hasattr(result, 'risk_warning') and result.risk_warning:
                 report_lines.extend([
                     f"⚠️ **Risk Warning**: {result.risk_warning}",
                     "",
                 ])
             
-            # 数据来源说明
+            # Data source notes
             if hasattr(result, 'search_performed') and result.search_performed:
                 report_lines.append("*🔍 Web search performed*")
             if hasattr(result, 'data_sources') and result.data_sources:
                 report_lines.append(f"*📋 Data source: {result.data_sources}*")
             
-            # 错误信息（如果有）
+            # Error info (if any)
             if not result.success and result.error_message:
                 report_lines.extend([
                     "",
@@ -530,7 +530,7 @@ class NotificationService:
                 "",
             ])
         
-        # 底部信息（去除免责声明）
+        # Footer (disclaimer removed)
         report_lines.extend([
             "",
             f"*Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
@@ -619,24 +619,24 @@ class NotificationService:
         report_date: Optional[str] = None
     ) -> str:
         """
-        生成决策仪表盘格式的日报（详细版）
+        Generate decision dashboard format daily report (detailed version)
 
-        格式：市场概览 + 重要信息 + 核心结论 + 数据透视 + 作战计划
+        Format: Market overview + Key info + Core conclusion + Data analysis + Action plan
 
         Args:
-            results: 分析结果列表
-            report_date: 报告日期（默认今天）
+            results: List of analysis results
+            report_date: Report date (defaults to today)
 
         Returns:
-            Markdown 格式的决策仪表盘日报
+            Markdown-formatted decision dashboard report
         """
         if report_date is None:
             report_date = datetime.now().strftime('%Y-%m-%d')
 
-        # 按评分排序（高分在前）
+        # Sort by score (highest first)
         sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
 
-        # 统计信息 - 使用 decision_type 字段准确统计
+        # Statistics - use decision_type field for accurate counting
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
         sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
         hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))
@@ -648,7 +648,7 @@ class NotificationService:
             "",
         ]
 
-        # === 新增：分析结果摘要 (Issue #112) ===
+        # === Analysis summary (Issue #112) ===
         if results:
             report_lines.extend([
                 "## 📊 Analysis Summary",
@@ -667,12 +667,12 @@ class NotificationService:
                 "",
             ])
 
-        # 逐个股票的决策仪表盘
+        # Decision dashboard for each stock
         for result in sorted_results:
             signal_text, signal_emoji, signal_tag = self._get_signal_level(result)
             dashboard = result.dashboard if hasattr(result, 'dashboard') and result.dashboard else {}
             
-            # 股票名称（优先使用 dashboard 或 result 中的名称，转义 *ST 等特殊字符）
+            # Stock name (prefer dashboard or result name, escape *ST special characters)
             raw_name = result.name if result.name and not result.name.startswith('Stock') and not result.name.startswith('股票') else f'Stock {result.code}'
             stock_name = self._escape_md(raw_name)
 
@@ -681,7 +681,7 @@ class NotificationService:
                 "",
             ])
 
-            # ========== 舆情与基本面概览（放在最前面）==========
+            # ========== Sentiment & Fundamental Overview (shown first) ==========
             intel = dashboard.get('intelligence', {}) if dashboard else {}
             if intel:
                 report_lines.extend([
@@ -689,15 +689,15 @@ class NotificationService:
                     "",
                 ])
 
-                # 舆情情绪总结
+                # Sentiment summary
                 if intel.get('sentiment_summary'):
                     report_lines.append(f"**💭 Sentiment**: {intel['sentiment_summary']}")
 
-                # 业绩预期
+                # Earnings outlook
                 if intel.get('earnings_outlook'):
                     report_lines.append(f"**📊 Earnings Outlook**: {intel['earnings_outlook']}")
 
-                # 风险警报（醒目显示）
+                # Risk alerts (prominently displayed)
                 risk_alerts = intel.get('risk_alerts', [])
                 if risk_alerts:
                     report_lines.append("")
