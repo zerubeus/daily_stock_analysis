@@ -852,9 +852,9 @@ class NotificationService:
                         report_lines.append(f"- {item}")
                     report_lines.append("")
             
-            # 如果没有 dashboard，显示传统格式
+            # If no dashboard, show traditional format
             if not dashboard:
-                # 操作理由
+                # Trading rationale
                 if result.buy_reason:
                     report_lines.extend([
                         f"**💡 Trading Rationale**: {result.buy_reason}",
