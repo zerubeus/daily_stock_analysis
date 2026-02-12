@@ -868,7 +868,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 技术面分析
+                # Technical analysis
                 if result.ma_analysis or result.volume_analysis:
                     report_lines.extend([
                         "### 📊 Technical Analysis",
@@ -880,7 +880,7 @@ class NotificationService:
                         report_lines.append(f"**Volume**: {result.volume_analysis}")
                     report_lines.append("")
                 
-                # 消息面
+                # News
                 if result.news_summary:
                     report_lines.extend([
                         "### 📰 News",
@@ -893,7 +893,7 @@ class NotificationService:
                 "",
             ])
         
-        # 底部（去除免责声明）
+        # Footer (disclaimer removed)
         report_lines.extend([
             "",
             f"*Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
@@ -903,26 +903,26 @@ class NotificationService:
 
     def generate_wechat_dashboard(self, results: List[AnalysisResult]) -> str:
         """
-        生成企业微信决策仪表盘精简版（控制在4000字符内）
-        
-        只保留核心结论和狙击点位
-        
+        Generate compact WeChat Work decision dashboard (within 4000 chars)
+
+        Keeps only core conclusions and sniper points
+
         Args:
-            results: 分析结果列表
-            
+            results: List of analysis results
+
         Returns:
-            精简版决策仪表盘
+            Compact decision dashboard
         """
         report_date = datetime.now().strftime('%Y-%m-%d')
         
-        # 按评分排序
+        # Sort by score
         sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
-        
-        # 统计 - 使用 decision_type 字段准确统计
+
+        # Statistics - use decision_type field for accurate counting
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
         sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
         hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))
-        
+
         lines = [
             f"## 🎯 {report_date} Decision Dashboard",
             "",
@@ -937,29 +937,29 @@ class NotificationService:
             battle = dashboard.get('battle_plan', {}) if dashboard else {}
             intel = dashboard.get('intelligence', {}) if dashboard else {}
             
-            # 股票名称
+            # Stock name
             stock_name = result.name if result.name and not result.name.startswith('Stock') and not result.name.startswith('股票') else f'Stock {result.code}'
             stock_name = self._escape_md(stock_name)
 
-            # 标题行：信号等级 + 股票名称
+            # Header line: signal level + stock name
             lines.append(f"### {signal_emoji} **{signal_text}** | {stock_name}({result.code})")
             lines.append("")
             
-            # 核心决策（一句话）
+            # Core decision (one sentence)
             one_sentence = core.get('one_sentence', result.analysis_summary) if core else result.analysis_summary
             if one_sentence:
                 lines.append(f"📌 **{one_sentence[:80]}**")
                 lines.append("")
-            
-            # 重要信息区（舆情+基本面）
+
+            # Key info section (sentiment + fundamentals)
             info_lines = []
             
-            # 业绩预期
+            # Earnings outlook
             if intel.get('earnings_outlook'):
                 outlook = intel['earnings_outlook'][:60]
                 info_lines.append(f"📊 Earnings: {outlook}")
-            
-            # 舆情情绪
+
+            # Sentiment
             if intel.get('sentiment_summary'):
                 sentiment = intel['sentiment_summary'][:50]
                 info_lines.append(f"💭 Sentiment: {sentiment}")
@@ -968,25 +968,25 @@ class NotificationService:
                 lines.extend(info_lines)
                 lines.append("")
             
-            # 风险警报（最重要，醒目显示）
+            # Risk alerts (most important, prominently displayed)
             risks = intel.get('risk_alerts', []) if intel else []
             if risks:
                 lines.append("🚨 **Risks**:")
-                for risk in risks[:2]:  # 最多显示2条
+                for risk in risks[:2]:  # Show at most 2
                     risk_text = risk[:50] + "..." if len(risk) > 50 else risk
                     lines.append(f"   • {risk_text}")
                 lines.append("")
             
-            # 利好催化
+            # Positive catalysts
             catalysts = intel.get('positive_catalysts', []) if intel else []
             if catalysts:
                 lines.append("✨ **Catalysts**:")
-                for cat in catalysts[:2]:  # 最多显示2条
+                for cat in catalysts[:2]:  # Show at most 2
                     cat_text = cat[:50] + "..." if len(cat) > 50 else cat
                     lines.append(f"   • {cat_text}")
                 lines.append("")
             
-            # 狙击点位
+            # Sniper points
             sniper = battle.get('sniper_points', {}) if battle else {}
             if sniper:
                 ideal_buy = sniper.get('ideal_buy', '')
@@ -1005,7 +1005,7 @@ class NotificationService:
                     lines.append(" | ".join(points))
                     lines.append("")
             
-            # 持仓建议
+            # Position advice
             pos_advice = core.get('position_advice', {}) if core else {}
             if pos_advice:
                 no_pos = pos_advice.get('no_position', '')
@@ -1016,10 +1016,10 @@ class NotificationService:
                     lines.append(f"💼 Holders: {has_pos[:50]}")
                 lines.append("")
             
-            # 检查清单简化版
+            # Simplified checklist
             checklist = battle.get('action_checklist', []) if battle else []
             if checklist:
-                # 只显示不通过的项目
+                # Only show failed items
                 failed_checks = [c for c in checklist if c.startswith('❌') or c.startswith('⚠️')]
                 if failed_checks:
                     lines.append("**Failed Checks**:")
@@ -1030,7 +1030,7 @@ class NotificationService:
             lines.append("---")
             lines.append("")
         
-        # 底部
+        # Footer
         lines.append(f"*Generated: {datetime.now().strftime('%H:%M')}*")
         
         content = "\n".join(lines)
@@ -1039,20 +1039,20 @@ class NotificationService:
     
     def generate_wechat_summary(self, results: List[AnalysisResult]) -> str:
         """
-        生成企业微信精简版日报（控制在4000字符内）
+        Generate compact WeChat Work daily report (within 4000 chars)
 
         Args:
-            results: 分析结果列表
+            results: List of analysis results
 
         Returns:
-            精简版 Markdown 内容
+            Compact Markdown content
         """
         report_date = datetime.now().strftime('%Y-%m-%d')
 
-        # 按评分排序
+        # Sort by score
         sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
 
-        # 统计 - 使用 decision_type 字段准确统计
+        # Statistics - use decision_type field for accurate counting
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
         sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
         hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))
@@ -1065,15 +1065,15 @@ class NotificationService:
             "",
         ]
         
-        # 每只股票精简信息（控制长度）
+        # Compact info for each stock (length-controlled)
         for result in sorted_results:
             emoji = result.get_emoji()
-            
-            # 核心信息行
+
+            # Core info line
             lines.append(f"### {emoji} {result.name}({result.code})")
             lines.append(f"**{result.operation_advice}** | Score:{result.sentiment_score} | {result.trend_prediction}")
             
-            # 操作理由（截断）
+            # Trading rationale (truncated)
             if hasattr(result, 'buy_reason') and result.buy_reason:
                 reason = result.buy_reason[:80] + "..." if len(result.buy_reason) > 80 else result.buy_reason
                 lines.append(f"💡 {reason}")
@@ -1083,14 +1083,14 @@ class NotificationService:
                 points = result.key_points[:60] + "..." if len(result.key_points) > 60 else result.key_points
                 lines.append(f"🎯 {points}")
             
-            # 风险提示（截断）
+            # Risk warning (truncated)
             if hasattr(result, 'risk_warning') and result.risk_warning:
                 risk = result.risk_warning[:50] + "..." if len(result.risk_warning) > 50 else result.risk_warning
                 lines.append(f"⚠️ {risk}")
             
             lines.append("")
         
-        # 底部
+        # Footer
         lines.extend([
             "---",
             "*AI-generated, for reference only, not investment advice*",
@@ -1103,15 +1103,15 @@ class NotificationService:
     
     def generate_single_stock_report(self, result: AnalysisResult) -> str:
         """
-        生成单只股票的分析报告（用于单股推送模式 #55）
-        
-        格式精简但信息完整，适合每分析完一只股票立即推送
-        
+        Generate single stock analysis report (for single-stock push mode #55)
+
+        Compact format with complete info, suitable for pushing immediately after analysis
+
         Args:
-            result: 单只股票的分析结果
-            
+            result: Analysis result for a single stock
+
         Returns:
-            Markdown 格式的单股报告
+            Markdown-formatted single stock report
         """
         report_date = datetime.now().strftime('%Y-%m-%d %H:%M')
         signal_text, signal_emoji, _ = self._get_signal_level(result)
@@ -1120,7 +1120,7 @@ class NotificationService:
         battle = dashboard.get('battle_plan', {}) if dashboard else {}
         intel = dashboard.get('intelligence', {}) if dashboard else {}
         
-        # 股票名称（转义 *ST 等特殊字符）
+        # Stock name (escape *ST special characters)
         raw_name = result.name if result.name and not result.name.startswith('Stock') and not result.name.startswith('股票') else f'Stock {result.code}'
         stock_name = self._escape_md(raw_name)
 
@@ -1133,7 +1133,7 @@ class NotificationService:
 
         self._append_market_snapshot(lines, result)
         
-        # 核心决策（一句话）
+        # Core decision (one sentence)
         one_sentence = core.get('one_sentence', result.analysis_summary) if core else result.analysis_summary
         if one_sentence:
             lines.extend([
@@ -1143,7 +1143,7 @@ class NotificationService:
                 "",
             ])
 
-        # 重要信息（舆情+基本面）
+        # Key info (sentiment + fundamentals)
         info_added = False
         if intel:
             if intel.get('earnings_outlook'):
@@ -1160,7 +1160,7 @@ class NotificationService:
                     info_added = True
                 lines.append(f"💭 **Sentiment**: {intel['sentiment_summary'][:80]}")
 
-            # 风险警报
+            # Risk alerts
             risks = intel.get('risk_alerts', [])
             if risks:
                 if not info_added:
@@ -1172,7 +1172,7 @@ class NotificationService:
                 for risk in risks[:3]:
                     lines.append(f"- {risk[:60]}")
 
-            # 利好催化
+            # Positive catalysts
             catalysts = intel.get('positive_catalysts', [])
             if catalysts:
                 lines.append("")
@@ -1183,7 +1183,7 @@ class NotificationService:
         if info_added:
             lines.append("")
         
-        # 狙击点位
+        # Sniper points
         sniper = battle.get('sniper_points', {}) if battle else {}
         if sniper:
             lines.extend([
@@ -1198,7 +1198,7 @@ class NotificationService:
             lines.append(f"| {ideal_buy} | {stop_loss} | {take_profit} |")
             lines.append("")
         
-        # 持仓建议
+        # Position advice
         pos_advice = core.get('position_advice', {}) if core else {}
         if pos_advice:
             lines.extend([
@@ -1260,128 +1260,130 @@ class NotificationService:
     
     def send_to_wechat(self, content: str) -> bool:
         """
-        推送消息到企业微信机器人
-        
-        企业微信 Webhook 消息格式：
-        支持 markdown 类型以及 text 类型, markdown 类型在微信中无法展示，可以使用 text 类型,
-        markdown 类型会解析 markdown 格式,text 类型会直接发送纯文本。
+        Push message to WeChat Work bot
 
-        markdown 类型示例：
+        WeChat Work Webhook message format:
+        Supports markdown and text types. Markdown type does not render in WeChat app,
+        use text type instead. Markdown type parses markdown format, text type sends plain text.
+
+        markdown type example:
         {
             "msgtype": "markdown",
             "markdown": {
-                "content": "## 标题\n\n内容"
-            }
-        }
-        
-        text 类型示例：
-        {
-            "msgtype": "text",
-            "text": {
-                "content": "内容"
+                "content": "## Title\n\nContent"
             }
         }
 
-        注意：企业微信 Markdown 限制 4096 字节（非字符）, Text 类型限制 2048 字节，超长内容会自动分批发送
-        可通过环境变量 WECHAT_MAX_BYTES 调整限制值
-        
+        text type example:
+        {
+            "msgtype": "text",
+            "text": {
+                "content": "Content"
+            }
+        }
+
+        Note: WeChat Work Markdown limit is 4096 bytes (not chars), Text limit is 2048 bytes,
+        long content is automatically sent in batches.
+        Adjustable via WECHAT_MAX_BYTES environment variable.
+
         Args:
-            content: Markdown 格式的消息内容
-            
+            content: Markdown-formatted message content
+
         Returns:
-            是否发送成功
+            Whether sending was successful
         """
         if not self._wechat_url:
-            logger.warning("企业微信 Webhook 未配置，跳过推送")
+            logger.warning("WeChat Work Webhook not configured, skipping push")
             return False
         
-        # 根据消息类型动态限制上限，避免 text 类型超过企业微信 2048 字节限制
+        # Dynamically limit based on message type to avoid exceeding WeChat Work 2048 byte limit for text
         if self._wechat_msg_type == 'text':
-            max_bytes = min(self._wechat_max_bytes, 2000)  # 预留一定字节给系统/分页标记
+            max_bytes = min(self._wechat_max_bytes, 2000)  # Reserve bytes for system/pagination markers
         else:
-            max_bytes = self._wechat_max_bytes  # markdown 默认 4000 字节
-        
-        # 检查字节长度，超长则分批发送
+            max_bytes = self._wechat_max_bytes  # markdown default 4000 bytes
+
+        # Check byte length, send in batches if too long
         content_bytes = len(content.encode('utf-8'))
         if content_bytes > max_bytes:
-            logger.info(f"消息内容超长({content_bytes}字节/{len(content)}字符)，将分批发送")
+            logger.info(f"Message too long ({content_bytes} bytes/{len(content)} chars), sending in batches")
             return self._send_wechat_chunked(content, max_bytes)
         
         try:
             return self._send_wechat_message(content)
         except Exception as e:
-            logger.error(f"发送企业微信消息失败: {e}")
+            logger.error(f"Failed to send WeChat Work message: {e}")
             return False
     
     def _send_wechat_chunked(self, content: str, max_bytes: int) -> bool:
         """
-        分批发送长消息到企业微信
-        
-        按股票分析块（以 --- 或 ### 分隔）智能分割，确保每批不超过限制
-        
+        Send long messages to WeChat Work in batches
+
+        Intelligently splits by stock analysis blocks (separated by --- or ###),
+        ensuring each batch stays within the limit
+
         Args:
-            content: 完整消息内容
-            max_bytes: 单条消息最大字节数
-            
+            content: Full message content
+            max_bytes: Maximum bytes per message
+
         Returns:
-            是否全部发送成功
+            Whether all batches were sent successfully
         """
         import time
         
         def get_bytes(s: str) -> int:
-            """获取字符串的 UTF-8 字节数"""
+            """Get UTF-8 byte length of string"""
             return len(s.encode('utf-8'))
         
-        # 智能分割：优先按 "---" 分隔（股票之间的分隔线）
-        # 其次尝试各级标题分割
+        # Smart split: prefer "---" separator (divider between stocks)
+        # Then try heading-level splits
         if "\n---\n" in content:
             sections = content.split("\n---\n")
             separator = "\n---\n"
         elif "\n### " in content:
-            # 按 ### 分割
+            # Split by ###
             parts = content.split("\n### ")
             sections = [parts[0]] + [f"### {p}" for p in parts[1:]]
             separator = "\n"
         elif "\n## " in content:
-            # 按 ## 分割 (兼容二级标题)
+            # Split by ## (compatible with h2 headings)
             parts = content.split("\n## ")
             sections = [parts[0]] + [f"## {p}" for p in parts[1:]]
             separator = "\n"
         elif "\n**" in content:
-            # 按 ** 加粗标题分割 (兼容 AI 未输出标准 Markdown 标题的情况)
+            # Split by ** bold headings (fallback when AI does not output standard Markdown headings)
             parts = content.split("\n**")
             sections = [parts[0]] + [f"**{p}" for p in parts[1:]]
             separator = "\n"
         else:
-            # 无法智能分割，按字符强制分割
+            # Cannot smart-split, force split by characters
             return self._send_wechat_force_chunked(content, max_bytes)
-        
+
         chunks = []
         current_chunk = []
         current_bytes = 0
         separator_bytes = get_bytes(separator)
-        effective_max_bytes = max_bytes - 50  # 预留分页标记空间，避免边界超限
-        
+        effective_max_bytes = max_bytes - 50  # Reserve space for pagination markers
+
         for section in sections:
             section_bytes = get_bytes(section) + separator_bytes
-            
-            # 如果单个 section 就超长，需要强制截断
+
+            # If a single section exceeds the limit, force truncate
             if section_bytes > effective_max_bytes:
-                # 先发送当前积累的内容
+                # Send accumulated content first
                 if current_chunk:
                     chunks.append(separator.join(current_chunk))
                     current_chunk = []
                     current_bytes = 0
-                
-                # 强制截断这个超长 section（按字节截断）
+
+                # Force truncate this oversized section (by bytes)
                 truncated = self._truncate_to_bytes(section, effective_max_bytes - 200)
-                truncated += "\n\n...(本段内容过长已截断)"
+                truncated += "\n\n...(content truncated due to length)"
                 chunks.append(truncated)
                 continue
-            
-            # 检查加入后是否超长
+
+            # Check if adding this section exceeds the limit
             if current_bytes + section_bytes > effective_max_bytes:
-                # 保存当前块，开始新块
+                # Save current chunk, start new chunk
                 if current_chunk:
                     chunks.append(separator.join(current_chunk))
                 current_chunk = [section]
@@ -1389,105 +1391,105 @@ class NotificationService:
             else:
                 current_chunk.append(section)
                 current_bytes += section_bytes
-        
-        # 添加最后一块
+
+        # Add last chunk
         if current_chunk:
             chunks.append(separator.join(current_chunk))
-        
-        # 分批发送
+
+        # Send in batches
         total_chunks = len(chunks)
         success_count = 0
-        
-        logger.info(f"企业微信分批发送：共 {total_chunks} 批")
-        
+
+        logger.info(f"WeChat Work batch send: {total_chunks} batches total")
+
         for i, chunk in enumerate(chunks):
-            # 添加分页标记
+            # Add pagination marker
             if total_chunks > 1:
                 page_marker = f"\n\n📄 *({i+1}/{total_chunks})*"
                 chunk_with_marker = chunk + page_marker
             else:
                 chunk_with_marker = chunk
-            
+
             try:
                 if self._send_wechat_message(chunk_with_marker):
                     success_count += 1
-                    logger.info(f"企业微信第 {i+1}/{total_chunks} 批发送成功")
+                    logger.info(f"WeChat Work batch {i+1}/{total_chunks} sent successfully")
                 else:
-                    logger.error(f"企业微信第 {i+1}/{total_chunks} 批发送失败")
+                    logger.error(f"WeChat Work batch {i+1}/{total_chunks} send failed")
             except Exception as e:
-                logger.error(f"企业微信第 {i+1}/{total_chunks} 批发送异常: {e}")
+                logger.error(f"WeChat Work batch {i+1}/{total_chunks} send error: {e}")
 
-            # 批次间隔，避免触发频率限制
+            # Interval between batches to avoid rate limiting
             if i < total_chunks - 1:
-                time.sleep(2.5)  # 增加到 2.5s，避免企业微信限流
+                time.sleep(2.5)  # 2.5s to avoid WeChat Work rate limit
 
         return success_count == total_chunks
     
     def _send_wechat_force_chunked(self, content: str, max_bytes: int) -> bool:
         """
-        强制按字节分割发送（无法智能分割时的 fallback）
-        
+        Force split and send by bytes (fallback when smart splitting is not possible)
+
         Args:
-            content: 完整消息内容
-            max_bytes: 单条消息最大字节数
+            content: Full message content
+            max_bytes: Maximum bytes per message
         """
         import time
-        
+
         chunks = []
         current_chunk = ""
-        
-        # 按行分割，确保不会在多字节字符中间截断
+
+        # Split by lines to avoid cutting multi-byte characters
         lines = content.split('\n')
-        
+
         for line in lines:
             test_chunk = current_chunk + ('\n' if current_chunk else '') + line
-            if len(test_chunk.encode('utf-8')) > max_bytes - 100:  # 预留空间给分页标记
+            if len(test_chunk.encode('utf-8')) > max_bytes - 100:  # Reserve space for pagination marker
                 if current_chunk:
                     chunks.append(current_chunk)
                 current_chunk = line
             else:
                 current_chunk = test_chunk
-        
+
         if current_chunk:
             chunks.append(current_chunk)
-        
+
         total_chunks = len(chunks)
         success_count = 0
-        
-        logger.info(f"企业微信强制分批发送：共 {total_chunks} 批")
-        
+
+        logger.info(f"WeChat Work force batch send: {total_chunks} batches total")
+
         for i, chunk in enumerate(chunks):
             page_marker = f"\n\n📄 *({i+1}/{total_chunks})*" if total_chunks > 1 else ""
-            
+
             try:
                 if self._send_wechat_message(chunk + page_marker):
                     success_count += 1
             except Exception as e:
-                logger.error(f"企业微信第 {i+1}/{total_chunks} 批发送异常: {e}")
-            
+                logger.error(f"WeChat Work batch {i+1}/{total_chunks} send error: {e}")
+
             if i < total_chunks - 1:
                 time.sleep(1)
-        
+
         return success_count == total_chunks
     
     def _truncate_to_bytes(self, text: str, max_bytes: int) -> str:
         """
-        按字节数截断字符串，确保不会在多字节字符中间截断
-        
+        Truncate string by byte count, ensuring multi-byte characters are not split
+
         Args:
-            text: 要截断的字符串
-            max_bytes: 最大字节数
-            
+            text: String to truncate
+            max_bytes: Maximum byte count
+
         Returns:
-            截断后的字符串
+            Truncated string
         """
         encoded = text.encode('utf-8')
         if len(encoded) <= max_bytes:
             return text
-        
-        # 从 max_bytes 位置往前找，确保不截断多字节字符
+
+        # Search backwards from max_bytes to avoid splitting multi-byte characters
         truncated = encoded[:max_bytes]
-        # 尝试解码，如果失败则继续往前
+        # Try to decode, move backwards if it fails
         while truncated:
             try:
                 return truncated.decode('utf-8')
@@ -1496,7 +1498,7 @@ class NotificationService:
         return ""
     
     def _gen_wechat_payload(self, content: str) -> dict:
-        """生成企业微信消息 payload"""
+        """Generate WeChat Work message payload"""
         if self._wechat_msg_type == 'text':
             return {
                 "msgtype": "text",
@@ -1513,7 +1515,7 @@ class NotificationService:
             }
 
     def _send_wechat_message(self, content: str) -> bool:
-        """发送企业微信消息"""
+        """Send WeChat Work message"""
         payload = self._gen_wechat_payload(content)
         
         response = requests.post(
@@ -1525,48 +1527,48 @@ class NotificationService:
         if response.status_code == 200:
             result = response.json()
             if result.get('errcode') == 0:
-                logger.info("企业微信消息发送成功")
+                logger.info("WeChat Work message sent successfully")
                 return True
             else:
-                logger.error(f"企业微信返回错误: {result}")
+                logger.error(f"WeChat Work returned error: {result}")
                 return False
         else:
-            logger.error(f"企业微信请求失败: {response.status_code}")
+            logger.error(f"WeChat Work request failed: {response.status_code}")
             return False
     
     def send_to_feishu(self, content: str) -> bool:
         """
-        推送消息到飞书机器人
-        
-        飞书自定义机器人 Webhook 消息格式：
+        Push message to Feishu bot
+
+        Feishu custom bot Webhook message format:
         {
             "msg_type": "text",
             "content": {
-                "text": "文本内容"
+                "text": "Text content"
             }
         }
-        
-        说明：飞书文本消息不会渲染 Markdown，需使用交互卡片（lark_md）格式
-        
-        注意：飞书文本消息限制约 20KB，超长内容会自动分批发送
-        可通过环境变量 FEISHU_MAX_BYTES 调整限制值
-        
+
+        Note: Feishu text messages do not render Markdown, use interactive card (lark_md) format.
+
+        Feishu text messages are limited to ~20KB, long content is automatically sent in batches.
+        Adjustable via FEISHU_MAX_BYTES environment variable.
+
         Args:
-            content: 消息内容（Markdown 会转为纯文本）
-            
+            content: Message content (Markdown will be converted to plain text)
+
         Returns:
-            是否发送成功
+            Whether sending was successful
         """
         if not self._feishu_url:
-            logger.warning("飞书 Webhook 未配置，跳过推送")
+            logger.warning("Feishu Webhook not configured, skipping push")
             return False
         
-        # 飞书 lark_md 支持有限，先做格式转换
+        # Feishu lark_md has limited support, do format conversion first
         formatted_content = format_feishu_markdown(content)
 
-        max_bytes = self._feishu_max_bytes  # 从配置读取，默认 20000 字节
-        
-        # 检查字节长度，超长则分批发送
+        max_bytes = self._feishu_max_bytes  # Read from config, default 20000 bytes
+
+        # Check byte length, send in batches if too long
         content_bytes = len(formatted_content.encode('utf-8'))
         if content_bytes > max_bytes:
             logger.info(f"飞书消息内容超长({content_bytes}字节/{len(content)}字符)，将分批发送")
@@ -1594,7 +1596,7 @@ class NotificationService:
         import time
         
         def get_bytes(s: str) -> int:
-            """获取字符串的 UTF-8 字节数"""
+            """Get UTF-8 byte length of string"""
             return len(s.encode('utf-8'))
         
         # 智能分割：优先按 "---" 分隔（股票之间的分隔线）
