@@ -705,7 +705,7 @@ class NotificationService:
                     for alert in risk_alerts:
                         report_lines.append(f"- {alert}")
 
-                # 利好催化
+                # Positive catalysts
                 catalysts = intel.get('positive_catalysts', [])
                 if catalysts:
                     report_lines.append("")
@@ -713,14 +713,14 @@ class NotificationService:
                     for cat in catalysts:
                         report_lines.append(f"- {cat}")
 
-                # 最新消息
+                # Latest news
                 if intel.get('latest_news'):
                     report_lines.append("")
                     report_lines.append(f"**📢 Latest News**: {intel['latest_news']}")
                 
                 report_lines.append("")
             
-            # ========== 核心结论 ==========
+            # ========== Core Conclusion ==========
             core = dashboard.get('core_conclusion', {}) if dashboard else {}
             one_sentence = core.get('one_sentence', result.analysis_summary)
             time_sense = core.get('time_sensitivity', 'This week')
@@ -737,7 +737,7 @@ class NotificationService:
                 "",
             ])
 
-            # 持仓分类建议
+            # Position-based advice
             if pos_advice:
                 report_lines.extend([
                     "| Position Status | Recommendation |",
@@ -749,7 +749,7 @@ class NotificationService:
 
             self._append_market_snapshot(report_lines, result)
             
-            # ========== 数据透视 ==========
+            # ========== Data Perspective ==========
             data_persp = dashboard.get('data_perspective', {}) if dashboard else {}
             if data_persp:
                 trend_data = data_persp.get('trend_status', {})
@@ -762,7 +762,7 @@ class NotificationService:
                     "",
                 ])
                 
-                # 趋势状态
+                # Trend status
                 if trend_data:
                     is_bullish = "✅ Yes" if trend_data.get('is_bullish', False) else "❌ No"
                     report_lines.extend([
@@ -770,7 +770,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 价格位置
+                # Price position
                 if price_data:
                     bias_status = price_data.get('bias_status', 'N/A')
                     bias_display = {"安全": "Safe", "警戒": "Warning", "危险": "Danger"}.get(bias_status, bias_status)
@@ -788,7 +788,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 量能分析
+                # Volume analysis
                 if vol_data:
                     report_lines.extend([
                         f"**Volume**: Vol Ratio {vol_data.get('volume_ratio', 'N/A')} ({vol_data.get('volume_status', '')}) | Turnover {vol_data.get('turnover_rate', 'N/A')}%",
@@ -796,7 +796,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 筹码结构
+                # Chip structure
                 if chip_data:
                     chip_health = chip_data.get('chip_health', 'N/A')
                     chip_display = {"健康": "Healthy", "一般": "Normal", "警惕": "Caution"}.get(chip_health, chip_health)
@@ -806,9 +806,9 @@ class NotificationService:
                         "",
                     ])
             
-            # 舆情情报已移至顶部显示
+            # Sentiment intel moved to top section
             
-            # ========== 作战计划 ==========
+            # ========== Action Plan ==========
             battle = dashboard.get('battle_plan', {}) if dashboard else {}
             if battle:
                 report_lines.extend([
@@ -816,7 +816,7 @@ class NotificationService:
                     "",
                 ])
 
-                # 狙击点位
+                # Sniper points
                 sniper = battle.get('sniper_points', {})
                 if sniper:
                     report_lines.extend([
@@ -831,7 +831,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 仓位策略
+                # Position strategy
                 position = battle.get('position_strategy', {})
                 if position:
                     report_lines.extend([
@@ -841,7 +841,7 @@ class NotificationService:
                         "",
                     ])
                 
-                # 检查清单
+                # Checklist
                 checklist = battle.get('action_checklist', []) if battle else []
                 if checklist:
                     report_lines.extend([
