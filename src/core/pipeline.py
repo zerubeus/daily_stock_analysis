@@ -487,8 +487,8 @@ class StockAnalysisPipeline:
             code=code,
             name=stock_name,
             sentiment_score=50,
-            trend_prediction="未知",
-            operation_advice="观望",
+            trend_prediction="Unknown",
+            operation_advice="Wait",
             success=agent_result.success,
             error_message=agent_result.error if not agent_result.success else None,
             data_sources=f"agent:{agent_result.provider}"
@@ -497,8 +497,8 @@ class StockAnalysisPipeline:
         if agent_result.success and agent_result.dashboard:
             dash = agent_result.dashboard
             result.sentiment_score = self._safe_int(dash.get("sentiment_score"), 50)
-            result.trend_prediction = dash.get("trend_prediction", "未知")
-            result.operation_advice = dash.get("operation_advice", "观望")
+            result.trend_prediction = dash.get("trend_prediction", "Unknown")
+            result.operation_advice = dash.get("operation_advice", "Wait")
             result.decision_type = dash.get("decision_type", "hold")
             result.analysis_summary = dash.get("analysis_summary", "")
             # The AI returns a top-level dict that contains a nested 'dashboard' sub-key
@@ -508,9 +508,9 @@ class StockAnalysisPipeline:
             result.dashboard = dash.get("dashboard") or dash
         else:
             result.sentiment_score = 50
-            result.operation_advice = "观望"
+            result.operation_advice = "Wait"
             if not result.error_message:
-                result.error_message = "Agent 未能生成有效的决策仪表盘"
+                result.error_message = "Agent failed to generate a valid Decision Dashboard"
 
         return result
 

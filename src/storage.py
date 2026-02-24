@@ -1066,15 +1066,15 @@ class DatabaseManager:
         ma20 = data.ma20 or 0
         
         if close > ma5 > ma10 > ma20 > 0:
-            return "多头排列 📈"
+            return "Bull Alignment 📈"
         elif close < ma5 < ma10 < ma20 and ma20 > 0:
-            return "空头排列 📉"
+            return "Bear Alignment 📉"
         elif close > ma5 and ma5 > ma10:
-            return "短期向好 🔼"
+            return "Short-term Bullish 🔼"
         elif close < ma5 and ma5 < ma10:
-            return "短期走弱 🔽"
+            return "Short-term Bearish 🔽"
         else:
-            return "震荡整理 ↔️"
+            return "Consolidation ↔️"
 
     @staticmethod
     def _parse_published_date(value: Optional[str]) -> Optional[datetime]:

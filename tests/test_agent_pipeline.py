@@ -199,7 +199,7 @@ class TestAgentResultConversion(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertFalse(result.success)
         self.assertEqual(result.sentiment_score, 50)
-        self.assertEqual(result.operation_advice, "观望")
+        self.assertEqual(result.operation_advice, "Wait")
         self.assertIn("Max steps exceeded", result.error_message)
 
 

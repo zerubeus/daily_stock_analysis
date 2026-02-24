@@ -277,10 +277,10 @@ def run_full_analysis(
         if merge_notification and (results or market_report) and not args.no_notify:
             parts = []
             if market_report:
-                parts.append(f"# 📈 大盘复盘\n\n{market_report}")
+                parts.append(f"# 📈 Market Recap\n\n{market_report}")
             if results:
                 dashboard_content = pipeline.notifier.generate_dashboard_report(results)
-                parts.append(f"# 🚀 个股决策仪表盘\n\n{dashboard_content}")
+                parts.append(f"# 🚀 Stock Decision Dashboard\n\n{dashboard_content}")
             if parts:
                 combined_content = "\n\n---\n\n".join(parts)
                 if pipeline.notifier.is_available():
@@ -296,7 +296,7 @@ def run_full_analysis(
                 emoji = r.get_emoji()
                 logger.info(
                     f"{emoji} {r.name}({r.code}): {r.operation_advice} | "
-                    f"评分 {r.sentiment_score} | {r.trend_prediction}"
+                    f"Score {r.sentiment_score} | {r.trend_prediction}"
                 )
 
         logger.info("\n任务执行完成")
@@ -312,19 +312,19 @@ def run_full_analysis(
                 # 1. 准备标题 "01-01 13:01大盘复盘"
                 tz_cn = timezone(timedelta(hours=8))
                 now = datetime.now(tz_cn)
-                doc_title = f"{now.strftime('%Y-%m-%d %H:%M')} 大盘复盘"
+                doc_title = f"{now.strftime('%Y-%m-%d %H:%M')} Market Recap"
 
                 # 2. 准备内容 (拼接个股分析和大盘复盘)
                 full_content = ""
 
                 # 添加大盘复盘内容（如果有）
                 if market_report:
-                    full_content += f"# 📈 大盘复盘\n\n{market_report}\n\n---\n\n"
+                    full_content += f"# 📈 Market Recap\n\n{market_report}\n\n---\n\n"
 
                 # 添加个股决策仪表盘（使用 NotificationService 生成）
                 if results:
                     dashboard_content = pipeline.notifier.generate_dashboard_report(results)
-                    full_content += f"# 🚀 个股决策仪表盘\n\n{dashboard_content}"
+                    full_content += f"# 🚀 Stock Decision Dashboard\n\n{dashboard_content}"
 
                 # 3. 创建文档
                 doc_url = feishu_doc.create_daily_doc(doc_title, full_content)
