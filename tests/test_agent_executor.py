@@ -347,15 +347,15 @@ class TestBuildUserMessage(unittest.TestCase):
     def test_basic_message(self):
         msg = self.executor._build_user_message("Analyze 600519")
         self.assertIn("Analyze 600519", msg)
-        self.assertIn("决策仪表盘", msg)
+        self.assertIn("Decision Dashboard JSON format", msg)
 
     def test_message_with_context(self):
         msg = self.executor._build_user_message(
             "Analyze",
             context={"stock_code": "600519", "report_type": "daily"},
         )
-        self.assertIn("股票代码: 600519", msg)
-        self.assertIn("报告类型: daily", msg)
+        self.assertIn("Stock code: 600519", msg)
+        self.assertIn("Report type: daily", msg)
 
 
 # ============================================================

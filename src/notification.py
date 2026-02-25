@@ -740,14 +740,14 @@ class NotificationService:
                 dashboard = result.dashboard if hasattr(result, 'dashboard') and result.dashboard else {}
                 
                 # 股票名称（优先使用 dashboard 或 result 中的名称，转义 *ST 等特殊字符）
-                raw_name = result.name if result.name and not result.name.startswith('股票') else f'股票{result.code}'
+                raw_name = result.name if result.name and not result.name.startswith(('股票', 'Stock ')) else f'Stock {result.code}'
                 stock_name = self._escape_md(raw_name)
-                
+
                 report_lines.extend([
                     f"## {signal_emoji} {stock_name} ({result.code})",
                     "",
                 ])
-                
+
                 # ========== 舆情与基本面概览（放在最前面）==========
                 intel = dashboard.get('intelligence', {}) if dashboard else {}
                 if intel:
@@ -823,7 +823,7 @@ class NotificationService:
                     ])
                     # 趋势状态
                     if trend_data:
-                        is_bullish = "✅ 是" if trend_data.get('is_bullish', False) else "❌ 否"
+                        is_bullish = "✅ Yes" if trend_data.get('is_bullish', False) else "❌ No"
                         report_lines.extend([
                             f"**MA Alignment**: {trend_data.get('ma_alignment', 'N/A')} | Bull Alignment: {is_bullish} | Trend Strength: {trend_data.get('trend_score', 'N/A')}/100",
                             "",
@@ -831,7 +831,7 @@ class NotificationService:
                     # 价格位置
                     if price_data:
                         bias_status = price_data.get('bias_status', 'N/A')
-                        bias_emoji = "✅" if bias_status in ("安全", "Safe") else ("⚠️" if bias_status in ("警戒", "Warning") else "🚨")
+                        bias_emoji = "✅" if bias_status in ("Safe", "安全") else ("⚠️" if bias_status in ("Warning", "警戒") else "🚨")
                         report_lines.extend([
                             "| Price Metric | Value |",
                             "|---------|------|",
@@ -854,7 +854,7 @@ class NotificationService:
                     # 筹码结构
                     if chip_data:
                         chip_health = chip_data.get('chip_health', 'N/A')
-                        chip_emoji = "✅" if chip_health in ("健康", "Healthy") else ("⚠️" if chip_health in ("一般", "Fair") else "🚨")
+                        chip_emoji = "✅" if chip_health in ("Healthy", "健康") else ("⚠️" if chip_health in ("Fair", "一般") else "🚨")
                         report_lines.extend([
                             f"**Chips**: Profit Ratio {chip_data.get('profit_ratio', 'N/A')} | Avg Cost {chip_data.get('avg_cost', 'N/A')} | Concentration {chip_data.get('concentration', 'N/A')} {chip_emoji}{chip_health}",
                             "",
@@ -982,7 +982,7 @@ class NotificationService:
             lines.append("")
             for r in sorted_results:
                 _, signal_emoji, _ = self._get_signal_level(r)
-                stock_name = self._escape_md(r.name if r.name and not r.name.startswith('股票') else f'股票{r.code}')
+                stock_name = self._escape_md(r.name if r.name and not r.name.startswith(('股票', 'Stock ')) else f'Stock {r.code}')
                 lines.append(
                     f"{signal_emoji} **{stock_name}({r.code})**: {r.operation_advice} | "
                     f"Score {r.sentiment_score} | {r.trend_prediction}"
@@ -996,7 +996,7 @@ class NotificationService:
                 intel = dashboard.get('intelligence', {}) if dashboard else {}
                 
                 # 股票名称
-                stock_name = result.name if result.name and not result.name.startswith('股票') else f'股票{result.code}'
+                stock_name = result.name if result.name and not result.name.startswith(('股票', 'Stock ')) else f'Stock {result.code}'
                 stock_name = self._escape_md(stock_name)
                 
                 # 标题行：信号等级 + 股票名称
@@ -1174,7 +1174,7 @@ class NotificationService:
         intel = dashboard.get('intelligence', {}) if dashboard else {}
         
         # 股票名称（转义 *ST 等特殊字符）
-        raw_name = result.name if result.name and not result.name.startswith('股票') else f'股票{result.code}'
+        raw_name = result.name if result.name and not result.name.startswith(('股票', 'Stock ')) else f'Stock {result.code}'
         stock_name = self._escape_md(raw_name)
         
         lines = [

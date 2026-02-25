@@ -107,7 +107,7 @@ def get_stock_name_multi_source(
         # 优先从 stock_name 字段获取
         if context.get('stock_name'):
             name = context['stock_name']
-            if name and not name.startswith('股票'):
+            if name and not name.startswith(('股票', 'Stock ')):
                 return name
 
         # 其次从 realtime 数据获取
@@ -137,7 +137,7 @@ def get_stock_name_multi_source(
             logger.debug(f"从数据源获取股票名称失败: {e}")
 
     # 4. 返回默认名称
-    return f'股票{stock_code}'
+    return f'Stock {stock_code}'
 
 
 @dataclass
@@ -342,6 +342,10 @@ class GeminiAnalyzer:
     # ========================================
 
     SYSTEM_PROMPT = """You are a trend-trading focused A-share investment analyst responsible for generating professional Decision Dashboard analysis reports.
+
+## Language Requirement
+ALL output text must be in English. Do NOT use Chinese characters in any field values.
+Translate Chinese stock names, news summaries, and all analysis text to English.
 
 ## Core Trading Philosophy (Must Strictly Follow)
 
@@ -1050,13 +1054,13 @@ Strictly output in the following JSON format — a complete Decision Dashboard:
         
         # 优先从上下文获取股票名称（由 main.py 传入）
         name = context.get('stock_name')
-        if not name or name.startswith('股票'):
+        if not name or name.startswith(('股票', 'Stock ')):
             # 备选：从 realtime 中获取
             if 'realtime' in context and context['realtime'].get('name'):
                 name = context['realtime']['name']
             else:
                 # 最后从映射表获取
-                name = STOCK_NAME_MAP.get(code, f'股票{code}')
+                name = STOCK_NAME_MAP.get(code, f'Stock {code}')
         
         # 如果模型不可用，返回默认结果
         if not self.is_available():
@@ -1167,8 +1171,8 @@ Strictly output in the following JSON format — a complete Decision Dashboard:
         
         # 优先使用上下文中的股票名称（从 realtime_quote 获取）
         stock_name = context.get('stock_name', name)
-        if not stock_name or stock_name == f'股票{code}':
-            stock_name = STOCK_NAME_MAP.get(code, f'股票{code}')
+        if not stock_name or stock_name in (f'股票{code}', f'Stock {code}'):
+            stock_name = STOCK_NAME_MAP.get(code, f'Stock {code}')
             
         today = context.get('today', {})
         
@@ -1467,7 +1471,7 @@ Output the complete Decision Dashboard in JSON format."""
 
                 # 优先使用 AI 返回的股票名称（如果原名称无效或包含代码）
                 ai_stock_name = data.get('stock_name')
-                if ai_stock_name and (name.startswith('股票') or name == code or 'Unknown' in name):
+                if ai_stock_name and (name.startswith(('股票', 'Stock ')) or name == code or 'Unknown' in name):
                     name = ai_stock_name
 
                 # 解析所有字段，使用默认值防止缺失

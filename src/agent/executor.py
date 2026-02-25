@@ -28,19 +28,19 @@ logger = logging.getLogger(__name__)
 
 # Tool name → short label used to build contextual thinking messages
 _THINKING_TOOL_LABELS: Dict[str, str] = {
-    "get_realtime_quote": "行情获取",
-    "get_daily_history": "K线数据获取",
-    "analyze_trend": "技术指标分析",
-    "get_chip_distribution": "筹码分布分析",
-    "search_stock_news": "新闻搜索",
-    "search_comprehensive_intel": "综合情报搜索",
-    "get_market_indices": "市场概览获取",
-    "get_sector_rankings": "行业板块分析",
-    "get_analysis_context": "历史分析上下文",
-    "get_stock_info": "基本信息获取",
-    "analyze_pattern": "K线形态识别",
-    "get_volume_analysis": "量能分析",
-    "calculate_ma": "均线计算",
+    "get_realtime_quote": "Fetching quotes",
+    "get_daily_history": "Fetching K-line data",
+    "analyze_trend": "Analyzing technicals",
+    "get_chip_distribution": "Analyzing chip distribution",
+    "search_stock_news": "Searching news",
+    "search_comprehensive_intel": "Searching comprehensive intel",
+    "get_market_indices": "Fetching market overview",
+    "get_sector_rankings": "Analyzing sector rankings",
+    "get_analysis_context": "Loading historical analysis",
+    "get_stock_info": "Fetching basic info",
+    "analyze_pattern": "Identifying K-line patterns",
+    "get_volume_analysis": "Analyzing volume",
+    "calculate_ma": "Calculating moving averages",
 }
 
 
@@ -126,6 +126,10 @@ AGENT_SYSTEM_PROMPT = """You are a trend-trading focused A-share investment anal
 6. **Tool failure handling** — Log failure reasons, continue analysis with available data, do not re-call failed tools.
 
 {skills_section}
+
+## Language Requirement
+ALL output text must be in English. Do NOT use Chinese characters in any field values.
+Translate Chinese stock names, news summaries, and all analysis text to English.
 
 ## Output Format: Decision Dashboard JSON
 
@@ -224,6 +228,10 @@ Your final response must be a valid JSON object with the following structure:
 """
 
 CHAT_SYSTEM_PROMPT = """You are a trend-trading focused A-share investment analysis Agent with data tools and trading strategies, responsible for answering users' stock investment questions.
+
+## Language Requirement
+ALL output text must be in English. Do NOT use Chinese characters in any field values.
+Translate Chinese stock names, news summaries, and all analysis text to English.
 
 ## Analysis Workflow (Must follow stages strictly; no skipping or merging stages)
 
@@ -331,7 +339,7 @@ class AgentExecutor:
         # Build system prompt with skills
         skills_section = ""
         if self.skill_instructions:
-            skills_section = f"## 激活的交易策略\n\n{self.skill_instructions}"
+            skills_section = f"## Activated Trading Strategies\n\n{self.skill_instructions}"
         system_prompt = AGENT_SYSTEM_PROMPT.format(skills_section=skills_section)
 
         # Build tool declarations for all providers
@@ -370,7 +378,7 @@ class AgentExecutor:
         # Build system prompt with skills
         skills_section = ""
         if self.skill_instructions:
-            skills_section = f"## 激活的交易策略\n\n{self.skill_instructions}"
+            skills_section = f"## Activated Trading Strategies\n\n{self.skill_instructions}"
         system_prompt = CHAT_SYSTEM_PROMPT.format(skills_section=skills_section)
 
         # Build tool declarations for all providers
@@ -394,25 +402,25 @@ class AgentExecutor:
         if context:
             context_parts = []
             if context.get("stock_code"):
-                context_parts.append(f"股票代码: {context['stock_code']}")
+                context_parts.append(f"Stock code: {context['stock_code']}")
             if context.get("stock_name"):
-                context_parts.append(f"股票名称: {context['stock_name']}")
+                context_parts.append(f"Stock name: {context['stock_name']}")
             if context.get("previous_price"):
-                context_parts.append(f"上次分析价格: {context['previous_price']}")
+                context_parts.append(f"Previous analysis price: {context['previous_price']}")
             if context.get("previous_change_pct"):
-                context_parts.append(f"上次涨跌幅: {context['previous_change_pct']}%")
+                context_parts.append(f"Previous change: {context['previous_change_pct']}%")
             if context.get("previous_analysis_summary"):
                 summary = context["previous_analysis_summary"]
                 summary_text = json.dumps(summary, ensure_ascii=False) if isinstance(summary, dict) else str(summary)
-                context_parts.append(f"上次分析摘要:\n{summary_text}")
+                context_parts.append(f"Previous analysis summary:\n{summary_text}")
             if context.get("previous_strategy"):
                 strategy = context["previous_strategy"]
                 strategy_text = json.dumps(strategy, ensure_ascii=False) if isinstance(strategy, dict) else str(strategy)
-                context_parts.append(f"上次策略分析:\n{strategy_text}")
+                context_parts.append(f"Previous strategy analysis:\n{strategy_text}")
             if context_parts:
-                context_msg = "[系统提供的历史分析上下文，可供参考对比]\n" + "\n".join(context_parts)
+                context_msg = "[System-provided historical analysis context for reference]\n" + "\n".join(context_parts)
                 messages.append({"role": "user", "content": context_msg})
-                messages.append({"role": "assistant", "content": "好的，我已了解该股票的历史分析数据。请告诉我你想了解什么？"})
+                messages.append({"role": "assistant", "content": "OK, I've reviewed the stock's historical analysis data. What would you like to know?"})
 
         messages.append({"role": "user", "content": message})
 
@@ -423,7 +431,7 @@ class AgentExecutor:
         if result.success:
             conversation_manager.add_message(session_id, "assistant", result.content)
         else:
-            error_note = f"[分析失败] {result.error or '未知错误'}"
+            error_note = f"[Analysis failed] {result.error or 'Unknown error'}"
             conversation_manager.add_message(session_id, "assistant", error_note)
 
         return result
@@ -436,11 +444,11 @@ class AgentExecutor:
 
             if progress_callback:
                 if not tool_calls_log:
-                    thinking_msg = "正在制定分析路径..."
+                    thinking_msg = "Planning analysis path..."
                 else:
                     last_tool = tool_calls_log[-1].get("tool", "")
                     label = _THINKING_TOOL_LABELS.get(last_tool, last_tool)
-                    thinking_msg = f"「{label}」已完成，继续深入分析..."
+                    thinking_msg = f"'{label}' complete, continuing analysis..."
                 progress_callback({"type": "thinking", "step": step + 1, "message": thinking_msg})
 
             response = self.llm_adapter.call_with_tools(messages, tool_decls)
@@ -527,7 +535,7 @@ class AgentExecutor:
                 logger.info(f"Agent completed in {step + 1} steps "
                           f"({time.time() - start_time:.1f}s, {total_tokens} tokens)")
                 if progress_callback:
-                    progress_callback({"type": "generating", "step": step + 1, "message": "正在生成最终分析..."})
+                    progress_callback({"type": "generating", "step": step + 1, "message": "Generating final analysis..."})
 
                 final_content = response.content or ""
                 
@@ -583,17 +591,17 @@ class AgentExecutor:
         parts = [task]
         if context:
             if context.get("stock_code"):
-                parts.append(f"\n股票代码: {context['stock_code']}")
+                parts.append(f"\nStock code: {context['stock_code']}")
             if context.get("report_type"):
-                parts.append(f"报告类型: {context['report_type']}")
-            
-            # 注入已有的上下文数据，避免重复获取
+                parts.append(f"Report type: {context['report_type']}")
+
+            # Inject pre-fetched context data to avoid redundant fetches
             if context.get("realtime_quote"):
-                parts.append(f"\n[系统已获取的实时行情]\n{json.dumps(context['realtime_quote'], ensure_ascii=False)}")
+                parts.append(f"\n[System-fetched realtime quotes]\n{json.dumps(context['realtime_quote'], ensure_ascii=False)}")
             if context.get("chip_distribution"):
-                parts.append(f"\n[系统已获取的筹码分布]\n{json.dumps(context['chip_distribution'], ensure_ascii=False)}")
-                
-        parts.append("\n请使用可用工具获取缺失的数据（如历史K线、新闻等），然后以决策仪表盘 JSON 格式输出分析结果。")
+                parts.append(f"\n[System-fetched chip distribution]\n{json.dumps(context['chip_distribution'], ensure_ascii=False)}")
+
+        parts.append("\nPlease use available tools to fetch missing data (e.g., historical K-lines, news), then output analysis results in Decision Dashboard JSON format.")
         return "\n".join(parts)
 
     def _serialize_tool_result(self, result: Any) -> str:
