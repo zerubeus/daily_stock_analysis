@@ -21,6 +21,7 @@ import pandas as pd
 from src.config import get_config
 from src.search_service import SearchService
 from src.core.market_profile import get_profile, MarketProfile
+from src.core.market_strategy import get_market_strategy_blueprint
 from data_provider.base import DataFetcherManager
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,7 @@ class MarketAnalyzer:
         self.data_manager = DataFetcherManager()
         self.region = region if region in ("cn", "us") else "cn"
         self.profile: MarketProfile = get_profile(self.region)
+        self.strategy = get_market_strategy_blueprint(self.region)
 
     def get_market_overview(self) -> MarketOverview:
         """
@@ -301,17 +303,7 @@ class MarketAnalyzer:
                 'max_output_tokens': 2048,
             }
             
-            # 根据 analyzer 使用的 API 类型调用
-            if self.analyzer._use_openai:
-                # 使用 OpenAI 兼容 API
-                review = self.analyzer._call_openai_api(prompt, generation_config)
-            else:
-                # 使用 Gemini API
-                response = self.analyzer._model.generate_content(
-                    prompt,
-                    generation_config=generation_config,
-                )
-                review = response.text.strip() if response and response.text else None
+            review = self.analyzer._call_litellm(prompt, generation_config)
             
             if review:
                 logger.info(f"[大盘] 复盘报告生成成功，长度: {len(review)} 字符")
@@ -497,6 +489,7 @@ Laggards: {bottom_sectors_text if bottom_sectors_text else "N/A"}"""
 - No JSON
 - No code blocks
 - Use emoji sparingly in headings (at most one per heading)
+- The strategy section below corresponds to the upstream label "策略计划"; keep the final report itself fully in English.
 
 ---
 
@@ -516,6 +509,8 @@ Laggards: {bottom_sectors_text if bottom_sectors_text else "N/A"}"""
 {news_placeholder}
 
 {data_no_indices_hint_en}
+
+{self.strategy.to_prompt_block()}
 
 ---
 
@@ -541,6 +536,9 @@ Laggards: {bottom_sectors_text if bottom_sectors_text else "N/A"}"""
 ### 6. Risk Alerts
 (Key risks to watch)
 
+### 7. Strategy Plan
+(Provide risk-on/neutral/risk-off stance, position sizing guideline, and one invalidation trigger.)
+
 ---
 
 Output the report content directly, no extra commentary.
@@ -554,6 +552,7 @@ Output the report content directly, no extra commentary.
 - No JSON
 - No code blocks
 - Use emoji sparingly in headings (at most one per heading)
+- The strategy section below corresponds to the upstream label "策略计划"; keep the final report itself fully in English.
 
 ---
 
@@ -573,6 +572,8 @@ Output the report content directly, no extra commentary.
 {news_placeholder}
 
 {data_no_indices_hint}
+
+{self.strategy.to_prompt_block()}
 
 ---
 
@@ -597,6 +598,9 @@ Output the report content directly, no extra commentary.
 
 ### 6. Risk Alerts
 (Key risks to watch)
+
+### 7. Strategy Plan
+(Provide a risk-on, balanced, or defensive stance, the corresponding position-sizing guidance, and one invalidation trigger. Close with a note that this is for reference only and not investment advice.)
 
 ---
 
@@ -660,6 +664,7 @@ Output the report content directly, no extra commentary.
 - **Laggards**: {bottom_text}
 """
         market_label = "A-share" if self.region == "cn" else "US"
+        strategy_summary = self.strategy.to_markdown_block()
         report = f"""## {overview.date} Market Recap
 
 ### 1. Market Summary
@@ -671,6 +676,8 @@ Today's {market_label} market showed a **{market_mood}** pattern.
 {sector_section}
 ### 5. Risk Alerts
 Markets involve risk; invest with caution. Data is for reference only, not investment advice.
+
+{strategy_summary}
 
 ---
 *Recap time: {datetime.now().strftime('%H:%M')}*

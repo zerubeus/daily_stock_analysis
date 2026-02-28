@@ -35,7 +35,7 @@ CN_PROFILE = MarketProfile(
         "股市 行情 分析",
         "A股 市场 热点 板块",
     ],
-    prompt_index_hint="分析上证、深证、创业板等各指数走势特点",
+    prompt_index_hint="Analyze the trend characteristics of the SSE, SZSE, and ChiNext indices",
     has_market_stats=True,
     has_sector_rankings=True,
 )
@@ -48,7 +48,7 @@ US_PROFILE = MarketProfile(
         "US stock market",
         "S&P 500 NASDAQ",
     ],
-    prompt_index_hint="分析标普500、纳斯达克、道指等各指数走势特点",
+    prompt_index_hint="Analyze the trend characteristics of the S&P 500, Nasdaq, and Dow indices",
     has_market_stats=False,
     has_sector_rankings=False,
 )

@@ -174,6 +174,7 @@ daily_stock_analysis/
 | `DISCORD_WEBHOOK_URL` | Discord Webhook URL | 可选 |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token（与 Webhook 二选一） | 可选 |
 | `DISCORD_CHANNEL_ID` | Discord Channel ID（使用 Bot 时需要） | 可选 |
+| `DISCORD_MAX_WORDS` | Discord 最大字数限制（默认 免费服务器限制2000） | 可选 |
 | `EMAIL_SENDER` | 发件人邮箱 | 可选 |
 | `EMAIL_PASSWORD` | 邮箱授权码（非登录密码） | 可选 |
 | `EMAIL_RECEIVERS` | 收件人邮箱（逗号分隔，留空发给自己） | 可选 |
@@ -214,9 +215,14 @@ daily_stock_analysis/
 
 ### 数据源配置
 
-| 变量名 | 说明 | 必填 |
-|--------|------|:----:|
-| `TUSHARE_TOKEN` | Tushare Pro Token | 可选 |
+| 变量名 | 说明 | 默认值 | 必填 |
+|--------|------|--------|:----:|
+| `TUSHARE_TOKEN` | Tushare Pro Token | - | 可选 |
+| `ENABLE_REALTIME_QUOTE` | 启用实时行情（关闭后使用历史收盘价分析） | `true` | 可选 |
+| `ENABLE_REALTIME_TECHNICAL_INDICATORS` | 盘中实时技术面：启用时用实时价计算 MA5/MA10/MA20 与多头排列（Issue #234）；关闭则用昨日收盘 | `true` | 可选 |
+| `ENABLE_CHIP_DISTRIBUTION` | 启用筹码分布分析（该接口不稳定，云端部署建议关闭） | `true` | 可选 |
+| `ENABLE_EASTMONEY_PATCH` | 东财接口补丁：东财接口频繁失败（如 RemoteDisconnected、连接被关闭）时建议设为 `true`，注入 NID 令牌与随机 User-Agent 以降低被限流概率 | `false` | 可选 |
+| `REALTIME_SOURCE_PRIORITY` | 实时行情数据源优先级（逗号分隔），如 `tencent,akshare_sina,efinance,akshare_em` | 见 .env.example | 可选 |
 
 ### 其他配置
 
@@ -228,6 +234,7 @@ daily_stock_analysis/
 | `MAX_WORKERS` | 并发线程数 | `3` |
 | `MARKET_REVIEW_ENABLED` | 启用大盘复盘 | `true` |
 | `MARKET_REVIEW_REGION` | 大盘复盘市场区域：cn(A股)、us(美股)、both(两者)，us 适合仅关注美股的用户 | `cn` |
+| `TRADING_DAY_CHECK_ENABLED` | 交易日检查：默认 `true`，非交易日跳过执行；设为 `false` 或使用 `--force-run` 可强制执行（Issue #373） | `true` |
 | `SCHEDULE_ENABLED` | 启用定时任务 | `false` |
 | `SCHEDULE_TIME` | 定时执行时间 | `18:00` |
 | `LOG_DIR` | 日志目录 | `./logs` |
@@ -357,6 +364,7 @@ python main.py --stocks 600519,300750 # 指定股票
 python main.py --dry-run              # 仅获取数据，不 AI 分析
 python main.py --no-notify            # 不发送推送
 python main.py --schedule             # 定时任务模式
+python main.py --force-run            # 非交易日也强制执行（Issue #373）
 python main.py --debug                # 调试模式（详细日志）
 python main.py --workers 5            # 指定并发数
 ```
@@ -385,6 +393,29 @@ schedule:
 | 18:00 | `'0 10 * * 1-5'` |
 | 21:00 | `'0 13 * * 1-5'` |
 
+#### GitHub Actions 非交易日手动运行（Issue #461 / #466）
+
+`daily_analysis.yml` 支持两种控制方式：
+
+- `TRADING_DAY_CHECK_ENABLED`：仓库级配置（`Settings → Secrets and variables → Actions`），默认 `true`
+- `workflow_dispatch.force_run`：手动触发时的单次开关，默认 `false`
+
+推荐优先级理解：
+
+| 配置组合 | 非交易日行为 |
+|---------|-------------|
+| `TRADING_DAY_CHECK_ENABLED=true` + `force_run=false` | 跳过执行（默认行为） |
+| `TRADING_DAY_CHECK_ENABLED=true` + `force_run=true` | 本次强制执行 |
+| `TRADING_DAY_CHECK_ENABLED=false` + `force_run=false` | 始终执行（定时和手动都不检查交易日） |
+| `TRADING_DAY_CHECK_ENABLED=false` + `force_run=true` | 始终执行 |
+
+手动触发步骤：
+
+1. 打开 `Actions → 每日股票分析 → Run workflow`
+2. 选择 `mode`（`full` / `market-only` / `stocks-only`）
+3. 若当天是非交易日且希望仍执行，将 `force_run` 设为 `true`
+4. 点击 `Run workflow`
+
 ### 本地定时任务
 
 内建的定时任务调度器支持每天在指定时间（默认 18:00）运行分析。
@@ -408,6 +439,7 @@ python main.py --schedule --no-run-immediately
 | `SCHEDULE_ENABLED` | 是否启用定时任务 | `false` | `true` |
 | `SCHEDULE_TIME` | 每日执行时间 (HH:MM) | `18:00` | `09:30` |
 | `SCHEDULE_RUN_IMMEDIATELY` | 启动服务时是否立即运行一次 | `true` | `false` |
+| `TRADING_DAY_CHECK_ENABLED` | 交易日检查：非交易日跳过执行；设为 `false` 可强制执行 | `true` | `false` |
 
 例如在 Docker 中配置：
 
@@ -415,6 +447,14 @@ python main.py --schedule --no-run-immediately
 # 设置启动时不立即分析
 docker run -e SCHEDULE_ENABLED=true -e SCHEDULE_RUN_IMMEDIATELY=false ...
 ```
+
+#### 交易日判断（Issue #373）
+
+默认根据自选股市场（A 股 / 港股 / 美股）和 `MARKET_REVIEW_REGION` 判断是否为交易日：
+- 使用 `exchange-calendars` 区分 A 股 / 港股 / 美股各自的交易日历（含节假日）
+- 混合持仓时，每只股票只在其市场开市日分析，休市股票当日跳过
+- 全部相关市场均为非交易日时，整体跳过执行（不启动 pipeline、不发推送）
+- 覆盖方式：`TRADING_DAY_CHECK_ENABLED=false` 或 命令行 `--force-run`
 
 #### 使用 Crontab
 
@@ -565,6 +605,14 @@ PUSHOVER_API_TOKEN=your_api_token
 - 支持美股/港股数据
 - 美股历史数据与实时行情均统一使用 YFinance，以避免 akshare 美股复权异常导致的技术指标错误
 
+### 东财接口频繁失败时的处理
+
+若日志出现 `RemoteDisconnected`、`push2his.eastmoney.com` 连接被关闭等，多为东财限流。建议：
+
+1. 在 `.env` 中设置 `ENABLE_EASTMONEY_PATCH=true`
+2. 将 `MAX_WORKERS=1` 降低并发
+3. 若已配置 Tushare，可优先使用 Tushare 数据源
+
 ---
 
 ## 高级功能
@@ -594,7 +642,41 @@ GEMINI_MODEL=gemini-3-flash-preview
 OPENAI_API_KEY=xxx
 OPENAI_BASE_URL=https://api.deepseek.com/v1
 OPENAI_MODEL=deepseek-chat
+# 思考模式：deepseek-reasoner、deepseek-r1、qwq 等自动识别；deepseek-chat 系统按模型名自动启用
 ```
+
+### LiteLLM 直接集成（多模型 + 多 Key 负载均衡）
+
+本项目通过 [LiteLLM](https://github.com/BerriAI/litellm) 统一调用所有 LLM，无需单独启动 Proxy 服务。
+
+**两层机制**：同一模型多 Key 轮换（Router）与跨模型降级（Fallback）分层独立，互不干扰。
+
+**多 Key + 跨模型降级配置示例**：
+
+```env
+# 主模型：3 个 Gemini Key 轮换，任一 429 时 Router 自动切换下一个 Key
+GEMINI_API_KEYS=key1,key2,key3
+LITELLM_MODEL=gemini/gemini-3-flash-preview
+
+# 跨模型降级：主模型全部 Key 均失败时，按序尝试 Claude → GPT
+# 需配置对应 API Key：ANTHROPIC_API_KEY、OPENAI_API_KEY
+LITELLM_FALLBACK_MODELS=anthropic/claude-3-5-sonnet-20241022,openai/gpt-4o-mini
+```
+
+**预期行为**：首次请求用 `key1`；若 429，Router 下次用 `key2`；若 3 个 Key 均不可用，则切换到 Claude，再失败则切换到 GPT。
+
+> ⚠️ `LITELLM_MODEL` 必须包含 provider 前缀（如 `gemini/`、`anthropic/`、`openai/`），
+> 否则系统无法识别应使用哪组 API Key。旧格式的 `GEMINI_MODEL`（无前缀）仅用于未配置 `LITELLM_MODEL` 时的自动推断。
+
+**依赖说明**：`requirements.txt` 中保留 `openai>=1.0.0`，因 LiteLLM 内部依赖 OpenAI SDK 作为统一接口；显式保留可确保版本兼容性，用户无需单独配置。
+
+**视觉模型（图片提取股票代码）**：
+
+从图片提取股票代码（如 `/api/v1/stocks/extract-from-image`）使用 LiteLLM Vision，采用 OpenAI `image_url` 格式，支持 Gemini、Claude、OpenAI 等所有 Vision-capable 模型。
+
+- **模型优先级**：`OPENAI_VISION_MODEL` > `LITELLM_MODEL` > 根据已有 API Key 推断
+- **Gemini 3 限制**：Gemini 3 不支持 Vision，系统自动降级为 `gemini/gemini-2.0-flash`
+- **主模型不支持 Vision 时**：若主模型为 DeepSeek 等非 Vision 模型，可显式配置 `OPENAI_VISION_MODEL=openai/gpt-4o` 或 `gemini/gemini-2.0-flash` 供图片提取使用
 
 ### 调试模式
 

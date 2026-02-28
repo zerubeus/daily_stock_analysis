@@ -1,50 +1,101 @@
 # Changelog
 
-所有重要更改都会记录在此文件中。
+All notable changes to this project will be documented in this file.
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
-版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+> For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
 
-### 新增（#minor）
-- 🤖 **Agent 策略问股**（全链路，#367）
-  - **API**：新增 `/api/v1/agent/strategies`（获取策略列表）与 `/api/v1/agent/chat/stream`（SSE 流式对话）
-  - **核心**：`src/agent/`（AgentExecutor ReAct 循环、LLMToolAdapter 多厂商适配、ConversationManager 会话持久化、ToolRegistry 工具注册）
-  - **内置策略**：11 种 YAML 策略（多头趋势、均线金叉、量价突破、缩量回踩、缠论、波浪理论、情绪周期、箱体震荡、龙头策略、一阳三阴、底部放量）
-  - **Web**：`/chat` 页面支持策略选择、流式进度反馈、多轮追问、从历史报告跳转追问
-  - **Bot**：`/ask <code> [strategy]` 命令触发策略分析，`/chat` 命令进入多轮对话
-  - **流水线接入**：`AGENT_MODE=true` 时 pipeline 自动路由至 Agent 分析分支，向下兼容
-  - **配置项**：`AGENT_MODE`、`AGENT_MAX_STEPS`、`AGENT_STRATEGY_DIR`
-  - **兼容性**：`AGENT_MODE` 默认 false，不影响现有非 Agent 模式；回滚只需将 `AGENT_MODE` 设为 false
-- ⚙️ **Agent 工具链能力增强**
-  - 扩展 `analysis_tools` 与 `data_tools`，优化策略问股的工具调用链路与分析覆盖
+### Fixed
+- 🐛 **AstrBot sender docstring misplaced** — `import time` placed before docstring in `_send_astrbot`, causing it to become dead code
+- 🐛 **Telegram Markdown link escaping** — `_convert_to_telegram_markdown` escaped `[]()` characters, breaking all Markdown links in reports
+- 🐛 **Duplicate `discord_bot_status` field** in Config dataclass — second declaration silently shadowed the first
+- 🧹 **Unused imports** — removed `shutil`/`subprocess` from `main.py`
 
-### 修复（#patch）
-- 🐛 **Agent 对话 Bug 修复**（#367 review follow-up）
-  - 修复 `bot/commands/ask.py` 中 `list_strategies()` 方法不存在导致策略名称回显失败，改为 `list_skills()` 正确属性访问
-  - 修复 `session_id` 缺省值为 `"default_session"` 导致多用户/多标签页会话串用，改为每次生成 UUID
-  - 修复 LLM 失败时对话消息不落库，下一轮上下文断层；现在成功/失败均写入历史
-  - `asyncio.get_event_loop()` 改为 Python 3.10+ 推荐的 `get_running_loop()`
-  - `storage.py` 中 `session.query()` 改为 SQLAlchemy 2.x 风格 `session.execute(select(...))`
-  - `ChatPage.tsx` 消除所有 `@typescript-eslint/no-explicit-any` 报错，引入 `FollowUpContext`、`ChatStreamPayload` 接口
-  - Agent 进度提示从「第 N 步：AI 正在思考...」改为具体动作描述（如「行情获取」已完成，继续深入分析...）
-- 🐛 **Agent 对话会话存储与默认策略修复**
-  - 修复 `DatabaseManager` 缺失 `session_scope` 导致 `/api/v1/agent/chat` 返回 500 的问题
-  - 修复会话历史读取的数据结构不一致问题，避免多轮对话中断
-  - 新增内置默认多头策略 `bull_trend`，并将默认策略收敛为更适合常规个股分析的组合
-  - Web 端对话页文案调整为“策略对话”，并默认勾选多头相关策略，降低使用门槛
-- 🐛 **Dashboard 嵌套映射与测试硬编码修复**
-  - 修复 Dashboard 端策略结果映射中的嵌套结构解析问题，避免展示异常
-  - 修复测试中的硬编码数据，减少因固定值导致的回归误报
+### Changed
+- ⚙️ **Auto-tag workflow defaults to NO tag** — only tags when commit message explicitly contains `#patch`, `#minor`, or `#major`
 
-### 测试（#patch）
-- ✅ **Agent 相关测试更新**
-  - 更新策略数量断言（`6 -> 11`），并同步 `test_agent_pipeline`、`test_agent_registry` 的断言逻辑
+### Docs
+- 📝 Clarified GitHub Actions non-trading-day manual run controls (`TRADING_DAY_CHECK_ENABLED` + `force_run`) for Issue #461 / PR #466
 
-### 文档（#skip）
-- 📝 **Agent 文档补充**
-  - 更新 `README.md`、`docs/README_EN.md`、`docs/README_CHT.md` 与 changelog，补充策略问股使用说明与测试说明
+## [3.4.7] - 2026-02-28
+
+### Added
+- 🧠 **CN/US Market Strategy Blueprint System** (#395) — market review prompt injects region-specific strategy blueprints with position sizing and risk trigger recommendations
+
+### Fixed
+- 🐛 **`TRADING_DAY_CHECK_ENABLED` env var and `--force-run` for GitHub Actions** (#466)
+- 🐛 **Agent pipeline preserved resolved stock names** (#464) — placeholder names no longer leak into reports
+- 🐛 **Code cleanup** (#462, Fixes #422)
+- 🐛 **WebUI auto-build on startup** (#460)
+- 🐛 **ARCH_ARGS unbound variable** (#458)
+- 🐛 **Time zone inconsistency & right panel flash** (#439)
+
+### Docs
+- 📝 Clarify potential ambiguities in code (#343)
+- 📝 ENABLE_EASTMONEY_PATCH guidance for Issue #453 (#456)
+
+## [3.4.0] - 2026-02-27
+
+### Added
+- 📡 **LiteLLM Direct Integration + Multi API Key Support** (#454, Fixes #421 #428)
+  - Removed native SDKs (google-generativeai, google-genai, anthropic); unified through `litellm>=1.80.10`
+  - New config: `LITELLM_MODEL`, `LITELLM_FALLBACK_MODELS`, `GEMINI_API_KEYS`, `ANTHROPIC_API_KEYS`, `OPENAI_API_KEYS`
+  - Multi-key auto-builds LiteLLM Router (simple-shuffle) with 429 cooldown
+  - **Breaking**: `.env` `GEMINI_MODEL` (no prefix) only for fallback; explicit config must include provider prefix
+
+### Changed
+- ♻️ **Notification Refactoring** (#435) — extracted 10 sender classes into `src/notification_sender/`
+
+### Fixed
+- 🐛 LLM NoneType crash, history API 422, sniper points extraction
+- 🐛 Auto-build frontend on WebUI startup — `WEBUI_AUTO_BUILD` env var (default `true`)
+- 🐛 Docker explicit project name (#448)
+- 🐛 Bocha search SSL retry (#445, #446) — transient errors retry up to 3 times
+- 🐛 Gemini google-genai SDK migration (Fixes #440, #444)
+- 🐛 Mobile home page scrolling (Fixes #419, #433)
+- 🐛 History list scroll reset (#431)
+- 🐛 Settings save button false positive (fixes #417, #430)
+
+## [3.3.22] - 2026-02-26
+
+### Added
+- 💬 **Chat History Persistence** (Fixes #400, #414) — `/chat` page survives refresh, sidebar session list
+- 🎨 Project VI Assets — logo icon set, PSD, vector, banner (#425)
+- 🚀 Desktop CI Auto-Release (#426) — Windows + macOS parallel builds
+
+### Fixed
+- 🐛 Agent Reasoning 400 & LiteLLM Proxy (fixes #409, #427)
+- 🐛 Discord chunked sending (#413) — `DISCORD_MAX_WORDS` config
+- 🐛 yfinance shared DataFrame (#412)
+- 🐛 sniper_points parsing (#408)
+- 🐛 Agent framework category missing (#406)
+- 🐛 Date inconsistency & query id (fixes #322, #363)
+
+## [3.3.12] - 2026-02-24
+
+### Added
+- 📈 **Intraday Realtime Technical Indicators** (Issue #234, #397) — MA calculated from realtime price, config: `ENABLE_REALTIME_TECHNICAL_INDICATORS`
+- 🤖 **Agent Strategy Chat** (#367) — full ReAct pipeline, 11 YAML strategies, SSE streaming, multi-turn chat
+- 📢 PushPlus Group Push — `PUSHPLUS_TOPIC` (#402)
+- 📅 Trading Day Check (Issue #373, #375) — `TRADING_DAY_CHECK_ENABLED`, `--force-run`
+
+### Fixed
+- 🐛 DeepSeek reasoning mode (Issue #379, #386)
+- 🐛 Agent news intel persistence (Fixes #396, #405)
+- 🐛 Bare except clauses replaced with `except Exception` (#398)
+- 🐛 UUID fallback for HTTP non-secure context (fixes #377, #381)
+- 🐛 Docker DNS resolution (Fixes #372, #374)
+- 🐛 Agent session/strategy bugs — multiple follow-up fixes for #367
+- 🐛 yfinance parallel download data filtering
+
+### Changed
+- Market review strategy consistency — unified cn/us template
+- Agent test assertions updated (`6 -> 11`)
+
 
 ## [3.2.11] - 2026-02-23
 
@@ -87,6 +138,27 @@
   - 首次访问在网页设置初始密码；支持「系统设置 > 修改密码」和 CLI `python -m src.auth reset_password` 重置
 
 ## [3.2.6] - 2026-02-20
+### ⚠️ 破坏性变更（Breaking Changes）
+
+- **历史记录 API 变更 (Issue #322)**
+  - 路由变更：`GET /api/v1/history/{query_id}` → `GET /api/v1/history/{record_id}`
+  - 参数变更：`query_id` (字符串) → `record_id` (整数)
+  - 新闻接口变更：`GET /api/v1/history/{query_id}/news` → `GET /api/v1/history/{record_id}/news`
+  - 原因：`query_id` 在批量分析时可能重复，无法唯一标识单条历史记录。改用数据库主键 `id` 确保唯一性
+  - 影响范围：使用旧版历史详情 API 的所有客户端需同步更新
+
+### 修复
+- 修复美股（如 ADBE）技术指标矛盾：akshare 美股复权数据异常，统一美股历史数据源为 YFinance（Issue #311）
+- 🐛 **历史记录查询和显示问题 (Issue #322)**
+  - 修复历史记录列表查询中日期不一致问题：使用明天作为 endDate，确保包含今天全天的数据
+  - 修复服务器 UI 报告选择问题：原因是多条记录共享同一 `query_id`，导致总是显示第一条。现改用 `analysis_history.id` 作为唯一标识
+  - 历史详情、新闻接口及前端组件已全面适配 `record_id`
+  - 新增后台轮询（每 30s）与页面可见性变更时静默刷新历史列表，确保 CLI 发起的分析完成后前端能及时同步，使用 `silent` 模式避免触发 loading 状态
+- 🐛 **美股指数实时行情与日线数据** (Issue #273)
+  - 修复 SPX、DJI、IXIC、NDX、VIX、RUT 等美股指数无法获取实时行情的问题
+  - 新增 `us_index_mapping` 模块，将用户输入（如 SPX）映射为 Yahoo Finance 符号（如 ^GSPC）
+  - 美股指数与美股股票日线数据直接路由至 YfinanceFetcher，避免遍历不支持的数据源
+  - 消除重复的美股识别逻辑，统一使用 `is_us_stock_code()` 函数
 
 ### 优化
 - 🎨 **首页输入栏与 Market Sentiment 布局对齐优化**
@@ -673,7 +745,12 @@
 
 ---
 
-[Unreleased]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.4.7...HEAD
+[3.4.7]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.4.0...v3.4.7
+[3.4.0]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.3.22...v3.4.0
+[3.3.22]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.3.12...v3.3.22
+[3.3.12]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.2.11...v3.3.12
+[3.2.11]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v3.2.10...v3.2.11
 [2.3.0]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v2.2.5...v2.3.0
 [2.2.5]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v2.2.4...v2.2.5
 [2.2.4]: https://github.com/ZhuLinsen/daily_stock_analysis/compare/v2.2.3...v2.2.4

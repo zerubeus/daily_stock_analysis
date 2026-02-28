@@ -21,10 +21,36 @@ from typing import List, Dict, Any, Optional, Tuple
 from itertools import cycle
 import requests
 from newspaper import Article, Config
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from data_provider.us_index_mapping import is_us_index_code
 
 logger = logging.getLogger(__name__)
+
+# Transient network errors (retryable)
+_SEARCH_TRANSIENT_EXCEPTIONS = (
+    requests.exceptions.SSLError,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
+)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type(_SEARCH_TRANSIENT_EXCEPTIONS),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def _post_with_retry(url: str, *, headers: Dict[str, str], json: Dict[str, Any], timeout: int) -> requests.Response:
+    """POST with retry on transient SSL/network errors."""
+    return requests.post(url, headers=headers, json=json, timeout=timeout)
 
 
 def fetch_url_content(url: str, timeout: int = 5) -> str:
@@ -292,7 +318,7 @@ class TavilySearchProvider(BaseSearchProvider):
             parsed = urlparse(url)
             domain = parsed.netloc.replace('www.', '')
             return domain or '未知来源'
-        except:
+        except Exception:
             return '未知来源'
 
 
@@ -496,7 +522,7 @@ class SerpAPISearchProvider(BaseSearchProvider):
             from urllib.parse import urlparse
             parsed = urlparse(url)
             return parsed.netloc.replace('www.', '') or '未知来源'
-        except:
+        except Exception:
             return '未知来源'
 
 
@@ -558,8 +584,8 @@ class BochaSearchProvider(BaseSearchProvider):
                 "count": min(max_results, 50)  # 最大50条
             }
             
-            # 执行搜索
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            # 执行搜索（带瞬时 SSL/网络错误重试）
+            response = _post_with_retry(url, headers=headers, json=payload, timeout=10)
             
             # 检查HTTP状态码
             if response.status_code != 200:
@@ -570,7 +596,7 @@ class BochaSearchProvider(BaseSearchProvider):
                         error_message = error_data.get('message', response.text)
                     else:
                         error_message = response.text
-                except:
+                except Exception:
                     error_message = response.text
                 
                 # 根据错误码处理
@@ -693,7 +719,7 @@ class BochaSearchProvider(BaseSearchProvider):
             parsed = urlparse(url)
             domain = parsed.netloc.replace('www.', '')
             return domain or '未知来源'
-        except:
+        except Exception:
             return '未知来源'
 
 
@@ -858,7 +884,7 @@ class BraveSearchProvider(BaseSearchProvider):
                     return error_data['error']
                 return str(error_data)
             return response.text[:200]
-        except:
+        except Exception:
             return f"HTTP {response.status_code}: {response.text[:200]}"
 
     @staticmethod
@@ -869,7 +895,7 @@ class BraveSearchProvider(BaseSearchProvider):
             parsed = urlparse(url)
             domain = parsed.netloc.replace('www.', '')
             return domain or '未知来源'
-        except:
+        except Exception:
             return '未知来源'
 
 
