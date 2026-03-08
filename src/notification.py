@@ -27,6 +27,7 @@ from src.output_normalizer import (
     normalize_trend_prediction,
 )
 from bot.models import BotMessage
+from src.utils.data_processing import normalize_model_used
 from src.notification_sender import (
     AstrbotSender,
     CustomWebhookSender,
@@ -171,6 +172,14 @@ class NotificationService(
         """Render trend prediction in English."""
         normalized = normalize_trend_prediction(value)
         return normalized if isinstance(normalized, str) else (value or "")
+
+    def _collect_models_used(self, results: List[AnalysisResult]) -> List[str]:
+        models: List[str] = []
+        for result in results:
+            model = normalize_model_used(getattr(result, "model_used", None))
+            if model:
+                models.append(model)
+        return list(dict.fromkeys(models))
     
     def _detect_all_channels(self) -> List[NotificationChannel]:
         """
@@ -1129,8 +1138,11 @@ class NotificationService(
                 lines.append("")
         
         # 底部
+        models = self._collect_models_used(results)
+        if models:
+            lines.append(f"*Model used: {', '.join(models)}*")
         lines.append(f"*Generated: {datetime.now().strftime('%H:%M')}*")
-        
+
         content = "\n".join(lines)
         
         return content
@@ -1190,17 +1202,20 @@ class NotificationService(
             
             lines.append("")
         
-        # 底部
+        # 底部（模型行在 --- 之前，Issue #528）
+        models = self._collect_models_used(results)
+        if models:
+            lines.append(f"*Model used: {', '.join(models)}*")
         lines.extend([
             "---",
             "*AI-generated, for reference only, not investment advice*",
             f"*Full report: reports/report_{report_date.replace('-', '')}.md*"
         ])
-        
+
         content = "\n".join(lines)
-        
+
         return content
-    
+
     def generate_single_stock_report(self, result: AnalysisResult) -> str:
         """
         生成单只股票的分析报告（用于单股推送模式 #55）
@@ -1311,10 +1326,11 @@ class NotificationService(
                 "",
             ])
         
-        lines.extend([
-            "---",
-            "*AI-generated, for reference only, not investment advice*",
-        ])
+        lines.append("---")
+        model_used = normalize_model_used(getattr(result, "model_used", None))
+        if model_used:
+            lines.append(f"*Model used: {model_used}*")
+        lines.append("*AI-generated, for reference only, not investment advice*")
 
         return "\n".join(lines)
 
@@ -1359,31 +1375,6 @@ class NotificationService(
             ])
 
         lines.append("")
-    
-    def _truncate_to_bytes(self, text: str, max_bytes: int) -> str:
-        """
-        按字节数截断字符串，确保不会在多字节字符中间截断
-        
-        Args:
-            text: 要截断的字符串
-            max_bytes: 最大字节数
-            
-        Returns:
-            截断后的字符串
-        """
-        encoded = text.encode('utf-8')
-        if len(encoded) <= max_bytes:
-            return text
-        
-        # 从 max_bytes 位置往前找，确保不截断多字节字符
-        truncated = encoded[:max_bytes]
-        # 尝试解码，如果失败则继续往前
-        while truncated:
-            try:
-                return truncated.decode('utf-8')
-            except UnicodeDecodeError:
-                truncated = truncated[:-1]
-        return ""
 
     def _should_use_image_for_channel(
         self, channel: NotificationChannel, image_bytes: Optional[bytes]
@@ -1455,7 +1446,19 @@ class NotificationService(
                 logger.info("Markdown 已转换为图片，将向 %s 发送图片",
                             [ch.value for ch in channels_needing_image])
             elif channels_needing_image:
-                logger.warning("Markdown 转图片失败，将回退为文本发送")
+                try:
+                    from src.config import get_config
+                    engine = getattr(get_config(), "md2img_engine", "wkhtmltoimage")
+                except Exception:
+                    engine = "wkhtmltoimage"
+                hint = (
+                    "npm i -g markdown-to-file" if engine == "markdown-to-file"
+                    else "wkhtmltopdf (apt install wkhtmltopdf / brew install wkhtmltopdf)"
+                )
+                logger.warning(
+                    "Markdown 转图片失败，将回退为文本发送。请检查 MARKDOWN_TO_IMAGE_CHANNELS 配置并安装 %s",
+                    hint,
+                )
 
         channel_names = self.get_channel_names()
         logger.info(f"正在向 {len(self._available_channels)} 个渠道发送通知：{channel_names}")
