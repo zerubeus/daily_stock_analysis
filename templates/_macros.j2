@@ -1,0 +1,18 @@
+{# Shared macros for report templates #}
+{% macro market_snapshot(result) %}
+{% set snapshot = result.market_snapshot if result.market_snapshot else {} %}
+{% if snapshot %}
+### 📈 Market Data
+
+| Close | Prev | Open | High | Low | Chg% | Chg | Amp | Volume | Turnover |
+|------|------|------|------|------|------|-----|-----|--------|----------|
+| {{ snapshot.get('close', 'N/A') }} | {{ snapshot.get('prev_close', 'N/A') }} | {{ snapshot.get('open', 'N/A') }} | {{ snapshot.get('high', 'N/A') }} | {{ snapshot.get('low', 'N/A') }} | {{ snapshot.get('pct_chg', 'N/A') }} | {{ snapshot.get('change_amount', 'N/A') }} | {{ snapshot.get('amplitude', 'N/A') }} | {{ snapshot.get('volume', 'N/A') }} | {{ snapshot.get('amount', 'N/A') }} |
+{% if snapshot.get('price') %}
+
+| Current | Vol Ratio | Turnover | Source |
+|---------|-----------|----------|--------|
+| {{ snapshot.get('price', 'N/A') }} | {{ snapshot.get('volume_ratio', 'N/A') }} | {{ snapshot.get('turnover_rate', 'N/A') }} | {{ snapshot.get('source', 'N/A') }} |
+{% endif %}
+
+{% endif %}
+{% endmacro %}

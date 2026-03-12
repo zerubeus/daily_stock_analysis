@@ -1,0 +1,12 @@
+# 🎯 {{ report_date }} Decision Brief
+
+> {{ results|length }} stocks | 🟢{{ buy_count }} 🟡{{ hold_count }} 🔴{{ sell_count }}
+
+{% for e in enriched %}
+{% set dash = e.dashboard %}
+{% set core = (dash.get('core_conclusion') or {}) if dash else {} %}
+{% set one = (core.get('one_sentence') or e.result.analysis_summary or '')[:60] %}
+**{{ e.stock_name }}({{ e.result.code }})** {{ e.signal_emoji }} {{ e.display_advice }} | Score {{ e.result.sentiment_score }} | {{ one }}
+{% endfor %}
+
+*{{ report_timestamp }}*
