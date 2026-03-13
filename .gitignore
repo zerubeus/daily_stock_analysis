@@ -48,7 +48,7 @@ uv.lock
 .cursorrules
 
 # 数据和日志
-data/
+/data/
 logs/
 reports/
 *.db

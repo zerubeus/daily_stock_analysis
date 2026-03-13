@@ -1326,24 +1326,24 @@ class NotificationService(
                 return out
         # Fallback: brief summary from dashboard report
         if not results:
-            return f"# {report_date} 决策简报\n\n无分析结果"
+            return f"# {report_date} Decision Brief\n\nNo analysis results"
         sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
         sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
         hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))
         lines = [
-            f"# {report_date} 决策简报",
+            f"# {report_date} Decision Brief",
             "",
-            f"> {len(results)}只 | 🟢{buy_count} 🟡{hold_count} 🔴{sell_count}",
+            f"> {len(results)} stocks | 🟢{buy_count} 🟡{hold_count} 🔴{sell_count}",
             "",
         ]
         for r in sorted_results:
             _, emoji, _ = self._get_signal_level(r)
-            name = r.name if r.name and not r.name.startswith('股票') else f'股票{r.code}'
+            name = r.name if r.name and not r.name.startswith(('股票', 'Stock ')) else f'Stock {r.code}'
             dash = r.dashboard or {}
             core = dash.get('core_conclusion', {}) or {}
             one = (core.get('one_sentence') or r.analysis_summary or '')[:60]
-            lines.append(f"**{self._escape_md(name)}({r.code})** {emoji} {r.operation_advice} | 评分{r.sentiment_score} | {one}")
+            lines.append(f"**{self._escape_md(name)}({r.code})** {emoji} {self._display_operation_advice(r.operation_advice)} | Score {r.sentiment_score} | {one}")
         lines.append("")
         lines.append(f"*{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
         return "\n".join(lines)
